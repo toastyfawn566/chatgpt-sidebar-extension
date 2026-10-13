@@ -45,6 +45,41 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
+      <div class="setting-item">
+        <div class="setting-info">
+          <span class="setting-name">Open in Temporary Chat</span>
+          <span class="setting-description">Start the sidebar in a new Temporary Chat when it opens.</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="temporary-chat-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Keyboard shortcut-to-prompt assignments -->
+    <section class="settings-section">
+      <h2>Prompt Shortcuts</h2>
+      <p class="help-text">Assign a text-selection prompt to each shortcut slot. To change the actual keys, open <strong>chrome://extensions/shortcuts</strong>.</p>
+      <div class="setting-item shortcut-setting">
+        <div class="setting-info">
+          <span class="setting-name">Shortcut 1 <span class="shortcut-keys" data-command="send-prompt-1"></span></span>
+        </div>
+        <select class="prompt-shortcut-select" data-command="send-prompt-1" aria-label="Prompt for shortcut 1"></select>
+      </div>
+      <div class="setting-item shortcut-setting">
+        <div class="setting-info">
+          <span class="setting-name">Shortcut 2 <span class="shortcut-keys" data-command="send-prompt-2"></span></span>
+        </div>
+        <select class="prompt-shortcut-select" data-command="send-prompt-2" aria-label="Prompt for shortcut 2"></select>
+      </div>
+      <div class="setting-item shortcut-setting">
+        <div class="setting-info">
+          <span class="setting-name">Shortcut 3 <span class="shortcut-keys" data-command="send-prompt-3"></span></span>
+        </div>
+        <select class="prompt-shortcut-select" data-command="send-prompt-3" aria-label="Prompt for shortcut 3"></select>
+      </div>
+      <p class="help-text">A shortcut uses selected text within a field, the entire focused field if no text is selected, or highlighted text on a webpage. Password fields are ignored. The clipboard is unchanged.</p>
     </section>
     
     <!-- Two-column layout for prompts -->

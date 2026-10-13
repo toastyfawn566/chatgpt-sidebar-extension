@@ -27,6 +27,8 @@ A Chrome extension that provides quick access to ChatGPT in a convenient sidebar
   - `Ctrl+Shift+G` (or `Cmd+Shift+G` on Mac) — Toggle sidebar
   - `Alt+G` — Send selected text directly to ChatGPT
 - **Auto-Submit** — Optionally auto-send prompts to ChatGPT without pressing Enter
+- **Temporary Chat Startup** — Optionally open the sidebar in Temporary Chat mode
+- **Prompt Shortcuts** — Map three keyboard shortcuts to your text-selection prompts; use selected text or the focused text field
 - **Visual Feedback** — Green flash confirms text was pasted into ChatGPT
 
 ## Installation
@@ -64,6 +66,21 @@ No build step required — this extension uses vanilla JavaScript and can be loa
 1. Right-click → **Ask ChatGPT about this page** → **Settings...**
 2. Or go to Chrome extensions page and click **Options** for this extension
 3. Add, edit, reorder, enable/disable prompts as needed
+
+### Opening in Temporary Chat
+1. Open the extension's **Options** page.
+2. Enable **Open in Temporary Chat** under General Settings.
+3. Reopen the sidebar. Verify ChatGPT shows the **Temporary** indicator before sending.
+
+This controls the initial sidebar URL only. ChatGPT's internal New Chat button may switch back to standard mode.
+
+### Keyboard shortcuts for prompts
+1. Open **Options → Prompt Shortcuts** and choose a text prompt for each shortcut slot.
+2. Use **Ctrl+Shift+1 / 2 / 3** (macOS: **Control+Shift+1 / 2 / 3**) while viewing a normal webpage.
+3. To change the key combinations or resolve collisions, open `chrome://extensions/shortcuts` and configure the three **Send text** shortcuts for this extension.
+4. Highlight text (including just part of an input, textarea, or editable field), then press the assigned shortcut. If the focused field has no selection, the entire field is used. Ordinary webpage text must be selected.
+
+The shortcut opens the sidebar and fills ChatGPT's input with the configured prompt. Enable the existing **Auto-submit prompts** setting if you also want to send it immediately without pressing Enter. The shortcut doesn't overwrite the system clipboard or select/modify webpage text. Password fields are excluded. Shortcuts don't work on restricted Chrome pages or in every embedded editor.
 
 ## Template Variables
 

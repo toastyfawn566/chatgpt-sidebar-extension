@@ -9,6 +9,7 @@
     "contextMenus",
     "storage",
     "activeTab",
+    "scripting",
     "declarativeNetRequest",
     "clipboardWrite"
   ],
@@ -76,6 +77,18 @@
         "mac": "Command+Shift+G"
       },
       "description": "Toggle ChatGPT Sidebar"
+    },
+    "send-prompt-1": {
+      "suggested_key": { "default": "Ctrl+Shift+1", "mac": "MacCtrl+Shift+1" },
+      "description": "Send text to ChatGPT using shortcut slot 1"
+    },
+    "send-prompt-2": {
+      "suggested_key": { "default": "Ctrl+Shift+2", "mac": "MacCtrl+Shift+2" },
+      "description": "Send text to ChatGPT using shortcut slot 2"
+    },
+    "send-prompt-3": {
+      "suggested_key": { "default": "Ctrl+Shift+3", "mac": "MacCtrl+Shift+3" },
+      "description": "Send text to ChatGPT using shortcut slot 3"
     }
   },
   

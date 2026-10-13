@@ -366,3 +366,126 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   return false;
 });
+
+// =============================================================================
+// NATIVE CHROME SHORTCUTS
+// =============================================================================
+
+// Each command is a fixed Chrome shortcut slot. The corresponding text prompt
+// is chosen in Options, where it can be reassigned without editing the manifest.
+const DEFAULT_SHORTCUT_PROMPTS = {
+  'send-prompt-1': 'chatgpt-explain',
+  'send-prompt-2': 'chatgpt-summarize',
+  'send-prompt-3': 'chatgpt-translate'
+};
+
+/**
+ * Read selection within the focused field first; otherwise use its whole value.
+ * For ordinary webpages, capture only highlighted text.
+ * Only runs on a user-invoked extension shortcut, via activeTab permission.
+ * Nothing is selected or copied: the page and clipboard stay unchanged.
+ */
+async function captureShortcutText(tabId) {
+  const getText = () => {
+    const active = document.activeElement;
+    const isInput = active?.tagName === 'INPUT';
+    const editableInput = active?.tagName === 'TEXTAREA' ||
+      (isInput && /^(text|search|url|email|tel)$/i.test(active.type));
+
+    // Never copy a password or other non-text input's value.
+    if (isInput && active.type === 'password') return { text: '', priority: 0 };
+
+    if (editableInput) {
+      // HTML inputs and textareas don't expose selected text through
+      // window.getSelection(). selectionStart/End are authoritative.
+      if (typeof active.selectionStart === 'number' &&
+          typeof active.selectionEnd === 'number' &&
+          active.selectionEnd > active.selectionStart) {
+        const selected = active.value.slice(active.selectionStart, active.selectionEnd).trim();
+        // Do not accidentally send the WHOLE field if the selection is whitespace.
+        return { text: selected, priority: 4 };
+      }
+      return { text: active.value.trim(), priority: 2 };
+    }
+
+    if (active?.isContentEditable) {
+      const editable = active.closest('[contenteditable]') || active;
+      const selection = window.getSelection();
+      // Only count selection inside the focused editable field.
+      if (selection && !selection.isCollapsed && selection.anchorNode &&
+          editable.contains(selection.anchorNode) &&
+          editable.contains(selection.focusNode)) {
+        return { text: selection.toString().trim(), priority: 4 };
+      }
+      return { text: (editable.innerText || editable.textContent || '').trim(), priority: 2 };
+    }
+
+    // Noneditable webpage content must be highlighted explicitly.
+    return { text: window.getSelection()?.toString().trim() || '', priority: 3 };
+  };
+
+  let results;
+  try {
+    // allFrames catches selections in embedded editors when access is allowed.
+    results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true }, func: getText
+    });
+  } catch (error) {
+    // Cross-origin or inaccessible subframes can make allFrames fail in Chrome.
+    // The main document can still be read using the activeTab grant.
+    try {
+      results = await chrome.scripting.executeScript({
+        target: { tabId }, func: getText
+      });
+    } catch (fallbackError) {
+      console.warn('Could not read text from the active tab', fallbackError);
+      return '';
+    }
+  }
+
+  const candidates = results.map(result => result.result)
+    .filter(result => result && result.text);
+  candidates.sort((a, b) => b.priority - a.priority);
+  return candidates[0]?.text || '';
+}
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (!Object.prototype.hasOwnProperty.call(DEFAULT_SHORTCUT_PROMPTS, command)) return;
+
+  const handleTab = (activeTab) => {
+    if (!activeTab?.id) return;
+
+    // Start capturing before opening the panel (which may shift page focus).
+    const capture = captureShortcutText(activeTab.id);
+    // Important: do not await anything before sidePanel.open(); it requires
+    // the shortcut's user activation.
+    chrome.sidePanel.open({ tabId: activeTab.id }).catch(error => {
+      console.warn('Could not open ChatGPT Sidebar', error);
+    });
+
+    capture.then(async text => {
+      if (!text) return;
+
+      const saved = await chrome.storage.sync.get(['keyboardPromptBindings', 'selectionPrompts']);
+      const bindings = { ...DEFAULT_SHORTCUT_PROMPTS, ...saved.keyboardPromptBindings };
+      const promptId = bindings[command];
+      if (!promptId) return;
+
+      const prompts = saved.selectionPrompts || DEFAULT_SELECTION_PROMPTS;
+      const prompt = prompts.find(p => p.id === promptId && p.enabled !== false);
+      if (!prompt) return;
+
+      const formatted = formatTemplate(prompt.template, { text }).trim();
+      if (formatted) storePromptForSidepanel(formatted);
+    }).catch(error => console.warn('Could not process prompt shortcut', error));
+  };
+
+  if (tab?.id) {
+    handleTab(tab);
+  } else {
+    // Older Chrome builds may omit the tab argument.
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      handleTab(tabs[0]);
+    });
+  }
+});

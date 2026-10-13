@@ -81,6 +81,15 @@ const toastMessage = document.getElementById('toast-message');
 
 // Global Settings
 const autoSubmitToggle = document.getElementById('auto-submit-toggle');
+const temporaryChatToggle = document.getElementById('temporary-chat-toggle');
+
+// Chrome commands have fixed key slots; settings choose the prompt in each slot.
+const DEFAULT_SHORTCUT_PROMPTS = {
+  'send-prompt-1': 'chatgpt-explain',
+  'send-prompt-2': 'chatgpt-summarize',
+  'send-prompt-3': 'chatgpt-translate'
+};
+let keyboardPromptBindings = { ...DEFAULT_SHORTCUT_PROMPTS };
 
 // =============================================================================
 // STATE
@@ -134,6 +143,21 @@ autoSubmitToggle.addEventListener('change', async () => {
   showToast(autoSubmitToggle.checked ? 'Auto-submit enabled' : 'Auto-submit disabled');
 });
 
+// Temporary Chat is applied to the next sidebar instance.
+temporaryChatToggle.addEventListener('change', async () => {
+  await chrome.storage.sync.set({ openTemporaryChat: temporaryChatToggle.checked });
+  showToast('Reopen the sidebar to apply this setting');
+});
+
+// Assign a configured text prompt to each native Chrome shortcut.
+document.querySelectorAll('.prompt-shortcut-select').forEach(select => {
+  select.addEventListener('change', async () => {
+    keyboardPromptBindings[select.dataset.command] = select.value;
+    await chrome.storage.sync.set({ keyboardPromptBindings });
+    showToast('Shortcut prompt saved');
+  });
+});
+
 // =============================================================================
 // DATA MANAGEMENT
 // =============================================================================
@@ -142,13 +166,15 @@ autoSubmitToggle.addEventListener('change', async () => {
  * Loads saved prompts from Chrome storage
  */
 async function loadSettings() {
-  const result = await chrome.storage.sync.get(['pagePrompts', 'selectionPrompts', 'autoSubmit']);
+  const result = await chrome.storage.sync.get(['pagePrompts', 'selectionPrompts', 'autoSubmit', 'openTemporaryChat', 'keyboardPromptBindings']);
   
   pagePrompts = result.pagePrompts || DEFAULT_PAGE_PROMPTS.map(p => ({ ...p, enabled: true }));
   selectionPrompts = result.selectionPrompts || DEFAULT_SELECTION_PROMPTS.map(p => ({ ...p, enabled: true }));
   
-  // Load auto-submit setting
+  // Load global settings and prompt-to-shortcut assignments.
   autoSubmitToggle.checked = result.autoSubmit === true;
+  temporaryChatToggle.checked = result.openTemporaryChat === true;
+  keyboardPromptBindings = { ...DEFAULT_SHORTCUT_PROMPTS, ...result.keyboardPromptBindings };
   
   renderPromptLists();
   updateTrashCount();
@@ -172,6 +198,31 @@ async function saveSettings() {
 function renderPromptLists() {
   renderList(pagePromptsList, pagePrompts, 'page');
   renderList(selectionPromptsList, selectionPrompts, 'selection');
+  renderShortcutSettings();
+}
+
+/**
+ * Populate the shortcut selectors from the current text prompts.
+ */
+function renderShortcutSettings() {
+  document.querySelectorAll('.prompt-shortcut-select').forEach(select => {
+    const command = select.dataset.command;
+    select.replaceChildren(new Option('Disabled', ''));
+    selectionPrompts.filter(p => p.enabled !== false).forEach(prompt => {
+      select.appendChild(new Option(prompt.name, prompt.id));
+    });
+    select.value = keyboardPromptBindings[command] || '';
+    if (select.selectedIndex < 0) select.value = '';
+  });
+
+  chrome.commands.getAll().then(commands => {
+    commands.forEach(command => {
+      const keyLabel = document.querySelector(
+        `.shortcut-keys[data-command="${command.name}"]`
+      );
+      if (keyLabel) keyLabel.textContent = `(${command.shortcut || 'not assigned'})`;
+    });
+  }).catch(error => console.warn('Could not retrieve shortcut assignments', error));
 }
 
 /**

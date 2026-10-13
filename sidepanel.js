@@ -26,6 +26,20 @@ const dismissBtn = document.getElementById('dismiss-notification');
 let notificationTimeout = null;
 let iframeReady = false;
 
+// Set the initial iframe URL only after loading the user preference.
+async function initializeChatGPTFrame() {
+  try {
+    const { openTemporaryChat = false } = await chrome.storage.sync.get('openTemporaryChat');
+    iframe.src = openTemporaryChat
+      ? 'https://chatgpt.com/?temporary-chat=true'
+      : 'https://chatgpt.com';
+  } catch (error) {
+    console.error('ChatGPT Sidebar: Could not load chat mode preference', error);
+    iframe.src = 'https://chatgpt.com';
+  }
+}
+initializeChatGPTFrame();
+
 // =============================================================================
 // NOTIFICATION MANAGEMENT
 // =============================================================================
@@ -119,6 +133,8 @@ function handleIncomingText(text) {
 // =============================================================================
 
 iframe.addEventListener('load', () => {
+  // Ignore about:blank before the saved URL is assigned.
+  if (!iframe.getAttribute('src')) return;
   console.log('ChatGPT Sidebar: Iframe loaded');
   iframeReady = true;
   
